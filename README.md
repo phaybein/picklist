@@ -2,9 +2,21 @@
 
 `Picklist` is a public-first Laravel Zero CLI for people who save too many YouTube videos.
 
+Turn a YouTube playlist into a ranked weekly watch queue.
+
 It watches a dedicated YouTube playlist feed, enriches videos with `yt-dlp`, ranks them with a weekly-priority model, and writes the top picks into an Obsidian daily note.
 
 This project is designed to be forked and run from source on macOS first.
+
+## Why I Built It
+
+I spend a lot of time on YouTube while running, and I regularly find videos I want to watch later.
+
+The problem is that my watch queue keeps growing faster than I can get through it.
+
+As the backlog grows, great videos get buried. I know I am probably missing high-quality videos simply because they are lost in the queue.
+
+Picklist solves that problem by helping me surface the best videos each week, so I can actually watch them instead of letting them disappear into a growing playlist backlog.
 
 ## What It Does
 
@@ -29,6 +41,14 @@ https://www.youtube.com/feeds/videos.xml?playlist_id=YOUR_PLAYLIST_ID
 ```
 
 That keeps the app simpler, more stable, and friendlier for a public repo.
+
+## Why A Dedicated Playlist
+
+YouTube `Watch Later` is convenient, but it is a poor public-first integration target.
+
+It is private by default, awkward to access reliably through official APIs, and tends to push an app toward browser-auth hacks or scraping. A dedicated playlist is much easier for other people to fork, understand, and configure on their own systems.
+
+The tradeoff is small: instead of reusing `Watch Later`, you save videos into a dedicated playlist that Picklist manages as your source queue.
 
 ## Requirements
 
@@ -63,6 +83,27 @@ Run the full workflow manually:
 ```bash
 php picklist queue:run
 ```
+
+## First Run Example
+
+```bash
+picklist install
+picklist doctor
+picklist queue:run
+```
+
+Example playlist feed URL:
+
+```text
+https://www.youtube.com/feeds/videos.xml?playlist_id=PL_EXAMPLE_PLAYLIST_ID
+```
+
+During install, you will point Picklist at:
+
+- your playlist feed URL
+- your Obsidian vault root
+- your daily note path pattern
+- your preferred local data directory
 
 ## Onboarding Flow
 
@@ -160,6 +201,13 @@ The app keeps user-specific state outside the repo:
 - `data/queue.json`
 
 No private paths, secrets, or local snapshots need to be committed.
+
+## Naming
+
+- GitHub repo: `phaybein/picklist`
+- Composer package: `mauromartinez/picklist`
+
+That split is currently intentional. The repo and the PHP package do not have to share the same owner string.
 
 ## Development
 
