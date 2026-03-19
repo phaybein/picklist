@@ -36,7 +36,7 @@ class AppDoctorCommand extends Command
             'Schedule status' => ! $config->scheduleEnabled || $cronManager->hasEntry(),
         ];
 
-        $validationErrors = $validator->validate($config);
+        $validationErrors = $validator->validate($config, allowDirectoryCreation: false);
 
         foreach ($validationErrors as $error) {
             $this->error('[FAIL] '.$error);

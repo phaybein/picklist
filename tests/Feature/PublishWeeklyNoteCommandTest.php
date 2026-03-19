@@ -17,12 +17,13 @@ it('publishes the top ranked videos into the configured daily note without touch
     $filesystem->put($notePath, "# Existing note\n\n## Notes\n\nKeep this.\n");
 
     app(AppConfigStore::class)->save(new AppConfig(
-        playlistFeedUrl: 'https://example.com/feed.xml',
+        playlistId: 'PLabc123',
         vaultRoot: $vaultRoot,
         dailyNotePathPattern: 'daily/{month_number_padded} {month_name}/{day_number_padded} {month_name}.md',
         timezone: 'America/Los_Angeles',
         weeklyPickCount: 2,
         sectionHeading: 'Watch This Week',
+        ytDlpCookiesFromBrowser: '',
         dataDirectory: $dataDirectory,
         ytDlpPath: $binary,
         scheduleEnabled: true,
@@ -71,12 +72,13 @@ it('escapes markdown-sensitive video fields before writing the managed note sect
     $filesystem->ensureDirectoryExists(dirname($notePath));
 
     app(AppConfigStore::class)->save(new AppConfig(
-        playlistFeedUrl: 'https://example.com/feed.xml',
+        playlistId: 'PLabc123',
         vaultRoot: $vaultRoot,
         dailyNotePathPattern: 'daily/{month_number_padded} {month_name}/{day_number_padded} {month_name}.md',
         timezone: 'America/Los_Angeles',
         weeklyPickCount: 1,
         sectionHeading: 'Watch This Week',
+        ytDlpCookiesFromBrowser: '',
         dataDirectory: $dataDirectory,
         ytDlpPath: $binary,
         scheduleEnabled: true,

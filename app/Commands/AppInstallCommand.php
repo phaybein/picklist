@@ -31,12 +31,13 @@ class AppInstallCommand extends Command
         $defaultYtDlpPath = trim((string) shell_exec('command -v yt-dlp 2>/dev/null')) ?: 'yt-dlp';
 
         $config = new AppConfig(
-            playlistFeedUrl: $this->ask('Playlist feed URL'),
+            playlistId: trim((string) $this->ask('Playlist ID')),
             vaultRoot: rtrim((string) $this->ask('Obsidian vault root'), '/'),
             dailyNotePathPattern: ltrim((string) $this->ask('Daily note path pattern', 'daily/{month_number_padded} {month_name}/{day_number_padded} {month_name}.md'), '/'),
-            timezone: (string) $this->ask('Timezone', date_default_timezone_get()),
+            timezone: trim((string) $this->ask('Timezone (examples: America/Los_Angeles, America/New_York, UTC)', date_default_timezone_get())),
             weeklyPickCount: (int) $this->ask('Weekly pick count', '5'),
             sectionHeading: (string) $this->ask('Section heading', 'Watch This Week'),
+            ytDlpCookiesFromBrowser: trim((string) $this->ask('Browser cookies source for private YouTube access (optional; examples: safari, chrome, firefox)', '')),
             dataDirectory: rtrim((string) $this->ask('Local data directory', $defaultDataDirectory), '/'),
             ytDlpPath: (string) $this->ask('yt-dlp binary path', $defaultYtDlpPath),
             scheduleEnabled: (bool) $this->confirm('Enable scheduled sync and weekly publishing?', true),

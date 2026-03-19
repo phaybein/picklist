@@ -4,7 +4,9 @@ namespace App\Services;
 
 use App\Contracts\VideoMetadataFetcher;
 use App\Support\VttSubtitleParser;
+use Carbon\CarbonImmutable;
 use Illuminate\Filesystem\Filesystem;
+use Symfony\Component\Process\Exception\ProcessTimedOutException;
 use Symfony\Component\Process\Process;
 
 final class YtDlpVideoMetadataFetcher implements VideoMetadataFetcher
@@ -12,6 +14,8 @@ final class YtDlpVideoMetadataFetcher implements VideoMetadataFetcher
     public function __construct(
         private readonly Filesystem $files,
         private readonly VttSubtitleParser $subtitleParser,
+        private readonly int $metadataTimeoutSeconds = 60,
+        private readonly int $subtitleTimeoutSeconds = 180,
     ) {}
 
     public function fetch(string $url, string $binaryPath): array
@@ -23,8 +27,13 @@ final class YtDlpVideoMetadataFetcher implements VideoMetadataFetcher
             '--no-warnings',
             $url,
         ]);
+        $metadataProcess->setTimeout($this->metadataTimeoutSeconds);
 
-        $metadataProcess->mustRun();
+        try {
+            $metadataProcess->mustRun();
+        } catch (ProcessTimedOutException) {
+            return $this->timedOutMetadataFallback();
+        }
 
         /** @var array<string, mixed> $metadata */
         $metadata = json_decode($metadataProcess->getOutput(), true, flags: JSON_THROW_ON_ERROR);
@@ -33,6 +42,7 @@ final class YtDlpVideoMetadataFetcher implements VideoMetadataFetcher
         $this->files->ensureDirectoryExists($temporaryDirectory);
 
         $subtitleExcerpt = '';
+        $subtitleStatus = 'missing';
 
         try {
             $subtitleProcess = new Process([
@@ -50,13 +60,21 @@ final class YtDlpVideoMetadataFetcher implements VideoMetadataFetcher
                 $temporaryDirectory,
                 $url,
             ]);
+            $subtitleProcess->setTimeout($this->subtitleTimeoutSeconds);
 
-            $subtitleProcess->run();
+            try {
+                $subtitleProcess->run();
+            } catch (ProcessTimedOutException) {
+                $subtitleStatus = 'timeout';
+            }
 
-            $subtitleFiles = glob($temporaryDirectory.'/*.vtt') ?: [];
+            if ($subtitleStatus !== 'timeout') {
+                $subtitleFiles = glob($temporaryDirectory.'/*.vtt') ?: [];
 
-            if ($subtitleFiles !== []) {
-                $subtitleExcerpt = $this->subtitleParser->parse((string) $this->files->get($subtitleFiles[0]));
+                if ($subtitleFiles !== []) {
+                    $subtitleExcerpt = $this->subtitleParser->parse((string) $this->files->get($subtitleFiles[0]));
+                    $subtitleStatus = 'available';
+                }
             }
         } finally {
             $this->files->deleteDirectory($temporaryDirectory);
@@ -68,10 +86,23 @@ final class YtDlpVideoMetadataFetcher implements VideoMetadataFetcher
             'channel' => (string) ($metadata['channel'] ?? ''),
             'duration_seconds' => (int) ($metadata['duration'] ?? 0),
             'published_at' => isset($metadata['upload_date'])
-                ? now()->createFromFormat('Ymd', (string) $metadata['upload_date'])->startOfDay()->toIso8601String()
+                ? CarbonImmutable::createFromFormat('Ymd', (string) $metadata['upload_date'], 'UTC')->startOfDay()->toIso8601String()
                 : '',
             'transcript_excerpt' => mb_substr($subtitleExcerpt, 0, 1500),
-            'subtitle_status' => $subtitleExcerpt === '' ? 'missing' : 'available',
+            'subtitle_status' => $subtitleStatus,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function timedOutMetadataFallback(): array
+    {
+        return [
+            'description' => '',
+            'duration_seconds' => 0,
+            'transcript_excerpt' => '',
+            'subtitle_status' => 'timeout',
         ];
     }
 }

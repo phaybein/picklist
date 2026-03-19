@@ -16,12 +16,13 @@ it('runs the full flow and publishes on monday', function () {
     $binary = fakeBinary($home.'/bin/yt-dlp');
 
     app(AppConfigStore::class)->save(new AppConfig(
-        playlistFeedUrl: 'https://example.com/feed.xml',
+        playlistId: 'PLabc123',
         vaultRoot: $vaultRoot,
         dailyNotePathPattern: 'daily/{month_number_padded} {month_name}/{day_number_padded} {month_name}.md',
         timezone: 'America/Los_Angeles',
         weeklyPickCount: 1,
         sectionHeading: 'Watch This Week',
+        ytDlpCookiesFromBrowser: 'safari',
         dataDirectory: $home.'/data',
         ytDlpPath: $binary,
         scheduleEnabled: true,
@@ -29,7 +30,7 @@ it('runs the full flow and publishes on monday', function () {
 
     app()->instance(FeedFetcher::class, new class implements FeedFetcher
     {
-        public function fetch(string $url): array
+        public function fetch(AppConfig $config): array
         {
             return [[
                 'video_id' => 'abc123',
@@ -72,12 +73,13 @@ it('stops and returns a failure exit code when a required sub-command fails', fu
     $store = app(AppConfigStore::class);
 
     $store->save(new AppConfig(
-        playlistFeedUrl: 'https://example.com/feed.xml',
+        playlistId: 'PLabc123',
         vaultRoot: $home.'/vault',
         dailyNotePathPattern: 'daily/{month_number_padded} {month_name}/{day_number_padded} {month_name}.md',
         timezone: 'America/Los_Angeles',
         weeklyPickCount: 1,
         sectionHeading: 'Watch This Week',
+        ytDlpCookiesFromBrowser: '',
         dataDirectory: $home.'/data',
         ytDlpPath: $binary,
         scheduleEnabled: true,

@@ -2,10 +2,12 @@
 
 namespace App\Contracts;
 
+use App\Config\AppConfig;
+
 interface FeedFetcher
 {
     /**
      * @return list<array<string, mixed>>
      */
-    public function fetch(string $url): array;
+    public function fetch(AppConfig $config): array;
 }

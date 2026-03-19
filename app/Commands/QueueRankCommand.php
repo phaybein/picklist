@@ -22,16 +22,24 @@ class QueueRankCommand extends Command
     ): int {
         $config = $store->load();
         $videos = $repository->load($config);
+        $total = count($videos);
+        $ranked = [];
 
-        $ranked = collect($videos)
-            ->map(function (array $video) use ($config, $metadataFetcher, $ranker): array {
-                $metadata = $metadataFetcher->fetch((string) $video['url'], $config->ytDlpPath);
+        $this->line(sprintf('Ranking %d videos...', $total));
 
-                return $ranker->rank(array_merge($video, $metadata));
-            })
-            ->sortByDesc('final_rank')
-            ->values()
-            ->all();
+        $progressBar = $this->output->createProgressBar($total);
+        $progressBar->start();
+
+        foreach ($videos as $video) {
+            $metadata = $metadataFetcher->fetch((string) $video['url'], $config->ytDlpPath);
+            $ranked[] = $ranker->rank(array_merge($video, $metadata));
+            $progressBar->advance();
+        }
+
+        usort($ranked, static fn (array $left, array $right): int => ($right['final_rank'] ?? 0) <=> ($left['final_rank'] ?? 0));
+
+        $progressBar->finish();
+        $this->newLine(2);
 
         $repository->save($config, $ranked);
 

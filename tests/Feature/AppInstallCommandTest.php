@@ -3,7 +3,6 @@
 use App\Config\AppConfigStore;
 use App\Contracts\BinaryInstaller;
 use App\Contracts\CronManager;
-use App\Contracts\FeedFetcher;
 use Illuminate\Filesystem\Filesystem;
 
 it('writes local config and installs cron when requested', function () {
@@ -13,21 +12,6 @@ it('writes local config and installs cron when requested', function () {
     $filesystem->ensureDirectoryExists($vaultRoot);
     $binary = fakeBinary($home.'/bin/yt-dlp');
     $state = (object) ['installedCron' => null, 'binaryInstalled' => false];
-
-    app()->instance(FeedFetcher::class, new class implements FeedFetcher
-    {
-        public function fetch(string $url): array
-        {
-            return [[
-                'video_id' => 'abc123',
-                'url' => 'https://youtube.com/watch?v=abc123',
-                'title' => 'Test video',
-                'channel' => 'Channel',
-                'published_at' => '2026-03-17T00:00:00+00:00',
-                'feed_seen_at' => '2026-03-17T00:00:00+00:00',
-            ]];
-        }
-    });
 
     app()->instance(CronManager::class, new class($state) implements CronManager
     {
@@ -85,12 +69,13 @@ it('writes local config and installs cron when requested', function () {
     });
 
     $this->artisan('install')
-        ->expectsQuestion('Playlist feed URL', 'https://example.com/feed.xml')
+        ->expectsQuestion('Playlist ID', 'PLabc123')
         ->expectsQuestion('Obsidian vault root', $vaultRoot)
         ->expectsQuestion('Daily note path pattern', 'daily/{month_number_padded} {month_name}/{day_number_padded} {month_name}.md')
-        ->expectsQuestion('Timezone', 'America/Los_Angeles')
+        ->expectsQuestion('Timezone (examples: America/Los_Angeles, America/New_York, UTC)', 'America/Los_Angeles')
         ->expectsQuestion('Weekly pick count', '4')
         ->expectsQuestion('Section heading', 'Watch This Week')
+        ->expectsQuestion('Browser cookies source for private YouTube access (optional; examples: safari, chrome, firefox)', 'safari')
         ->expectsQuestion('Local data directory', $home.'/data')
         ->expectsQuestion('yt-dlp binary path', $binary)
         ->expectsConfirmation('Enable scheduled sync and weekly publishing?', 'yes')
@@ -100,7 +85,9 @@ it('writes local config and installs cron when requested', function () {
 
     $config = app(AppConfigStore::class)->load();
 
-    expect($config->weeklyPickCount)->toBe(4)
+    expect($config->playlistId)->toBe('PLabc123')
+        ->and($config->ytDlpCookiesFromBrowser)->toBe('safari')
+        ->and($config->weeklyPickCount)->toBe(4)
         ->and($config->vaultRoot)->toBe($vaultRoot)
         ->and($state->binaryInstalled)->toBeTrue()
         ->and($state->installedCron)->toContain('schedule:run');
@@ -113,21 +100,6 @@ it('skips the global binary install when the user declines it', function () {
     $filesystem->ensureDirectoryExists($vaultRoot);
     $binary = fakeBinary($home.'/bin/yt-dlp');
     $state = (object) ['binaryInstalled' => false];
-
-    app()->instance(FeedFetcher::class, new class implements FeedFetcher
-    {
-        public function fetch(string $url): array
-        {
-            return [[
-                'video_id' => 'abc123',
-                'url' => 'https://youtube.com/watch?v=abc123',
-                'title' => 'Test video',
-                'channel' => 'Channel',
-                'published_at' => '2026-03-17T00:00:00+00:00',
-                'feed_seen_at' => '2026-03-17T00:00:00+00:00',
-            ]];
-        }
-    });
 
     app()->instance(BinaryInstaller::class, new class($state) implements BinaryInstaller
     {
@@ -180,12 +152,13 @@ it('skips the global binary install when the user declines it', function () {
     });
 
     $this->artisan('install')
-        ->expectsQuestion('Playlist feed URL', 'https://example.com/feed.xml')
+        ->expectsQuestion('Playlist ID', 'PLabc123')
         ->expectsQuestion('Obsidian vault root', $vaultRoot)
         ->expectsQuestion('Daily note path pattern', 'daily/{month_number_padded} {month_name}/{day_number_padded} {month_name}.md')
-        ->expectsQuestion('Timezone', 'America/Los_Angeles')
+        ->expectsQuestion('Timezone (examples: America/Los_Angeles, America/New_York, UTC)', 'America/Los_Angeles')
         ->expectsQuestion('Weekly pick count', '4')
         ->expectsQuestion('Section heading', 'Watch This Week')
+        ->expectsQuestion('Browser cookies source for private YouTube access (optional; examples: safari, chrome, firefox)', '')
         ->expectsQuestion('Local data directory', $home.'/data')
         ->expectsQuestion('yt-dlp binary path', $binary)
         ->expectsConfirmation('Enable scheduled sync and weekly publishing?', 'no')
@@ -202,21 +175,6 @@ it('warns when the binary link directory is not on PATH', function () {
     $filesystem->ensureDirectoryExists($vaultRoot);
     $binary = fakeBinary($home.'/bin/yt-dlp');
     $state = (object) ['binaryInstalled' => false];
-
-    app()->instance(FeedFetcher::class, new class implements FeedFetcher
-    {
-        public function fetch(string $url): array
-        {
-            return [[
-                'video_id' => 'abc123',
-                'url' => 'https://youtube.com/watch?v=abc123',
-                'title' => 'Test video',
-                'channel' => 'Channel',
-                'published_at' => '2026-03-17T00:00:00+00:00',
-                'feed_seen_at' => '2026-03-17T00:00:00+00:00',
-            ]];
-        }
-    });
 
     app()->instance(BinaryInstaller::class, new class($state) implements BinaryInstaller
     {
@@ -269,12 +227,13 @@ it('warns when the binary link directory is not on PATH', function () {
     });
 
     $this->artisan('install')
-        ->expectsQuestion('Playlist feed URL', 'https://example.com/feed.xml')
+        ->expectsQuestion('Playlist ID', 'PLabc123')
         ->expectsQuestion('Obsidian vault root', $vaultRoot)
         ->expectsQuestion('Daily note path pattern', 'daily/{month_number_padded} {month_name}/{day_number_padded} {month_name}.md')
-        ->expectsQuestion('Timezone', 'America/Los_Angeles')
+        ->expectsQuestion('Timezone (examples: America/Los_Angeles, America/New_York, UTC)', 'America/Los_Angeles')
         ->expectsQuestion('Weekly pick count', '4')
         ->expectsQuestion('Section heading', 'Watch This Week')
+        ->expectsQuestion('Browser cookies source for private YouTube access (optional; examples: safari, chrome, firefox)', '')
         ->expectsQuestion('Local data directory', $home.'/data')
         ->expectsQuestion('yt-dlp binary path', $binary)
         ->expectsConfirmation('Enable scheduled sync and weekly publishing?', 'no')
@@ -291,21 +250,6 @@ it('warns when the global binary install fails', function () {
     $filesystem = app(Filesystem::class);
     $filesystem->ensureDirectoryExists($vaultRoot);
     $binary = fakeBinary($home.'/bin/yt-dlp');
-
-    app()->instance(FeedFetcher::class, new class implements FeedFetcher
-    {
-        public function fetch(string $url): array
-        {
-            return [[
-                'video_id' => 'abc123',
-                'url' => 'https://youtube.com/watch?v=abc123',
-                'title' => 'Test video',
-                'channel' => 'Channel',
-                'published_at' => '2026-03-17T00:00:00+00:00',
-                'feed_seen_at' => '2026-03-17T00:00:00+00:00',
-            ]];
-        }
-    });
 
     app()->instance(BinaryInstaller::class, new class implements BinaryInstaller
     {
@@ -356,12 +300,13 @@ it('warns when the global binary install fails', function () {
     });
 
     $this->artisan('install')
-        ->expectsQuestion('Playlist feed URL', 'https://example.com/feed.xml')
+        ->expectsQuestion('Playlist ID', 'PLabc123')
         ->expectsQuestion('Obsidian vault root', $vaultRoot)
         ->expectsQuestion('Daily note path pattern', 'daily/{month_number_padded} {month_name}/{day_number_padded} {month_name}.md')
-        ->expectsQuestion('Timezone', 'America/Los_Angeles')
+        ->expectsQuestion('Timezone (examples: America/Los_Angeles, America/New_York, UTC)', 'America/Los_Angeles')
         ->expectsQuestion('Weekly pick count', '4')
         ->expectsQuestion('Section heading', 'Watch This Week')
+        ->expectsQuestion('Browser cookies source for private YouTube access (optional; examples: safari, chrome, firefox)', '')
         ->expectsQuestion('Local data directory', $home.'/data')
         ->expectsQuestion('yt-dlp binary path', $binary)
         ->expectsConfirmation('Enable scheduled sync and weekly publishing?', 'no')

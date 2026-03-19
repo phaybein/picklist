@@ -9,12 +9,13 @@ it('enriches and ranks queued videos', function () {
     $home = testHome();
     $binary = fakeBinary($home.'/bin/yt-dlp');
     $config = new AppConfig(
-        playlistFeedUrl: 'https://example.com/feed.xml',
+        playlistId: 'PLabc123',
         vaultRoot: $home.'/vault',
         dailyNotePathPattern: 'daily/{month_number_padded} {month_name}/{day_number_padded} {month_name}.md',
         timezone: 'America/Los_Angeles',
         weeklyPickCount: 3,
         sectionHeading: 'Watch This Week',
+        ytDlpCookiesFromBrowser: '',
         dataDirectory: $home.'/data',
         ytDlpPath: $binary,
         scheduleEnabled: true,
@@ -46,7 +47,10 @@ it('enriches and ranks queued videos', function () {
         }
     });
 
-    $this->artisan('queue:rank')->assertExitCode(0);
+    $this->artisan('queue:rank')
+        ->expectsOutputToContain('Ranking 1 videos...')
+        ->expectsOutputToContain('1/1')
+        ->assertExitCode(0);
 
     $videos = app(QueueRepository::class)->load($config);
 

@@ -3,10 +3,11 @@
 use App\Config\AppConfig;
 use App\Config\AppConfigStore;
 use App\Contracts\CronManager;
-use App\Contracts\FeedFetcher;
 use Illuminate\Filesystem\Filesystem;
 
 it('fails when the app is not installed', function () {
+    testHome();
+
     $this->artisan('doctor')
         ->expectsOutputToContain('[FAIL] Config is missing')
         ->assertExitCode(1);
@@ -16,37 +17,24 @@ it('reports passing checks for a healthy installation', function () {
     $filesystem = app(Filesystem::class);
     $home = testHome();
     $vaultRoot = $home.'/vault';
+    $dailyDirectory = $vaultRoot.'/daily';
     $dataDirectory = $home.'/data';
     $binary = fakeBinary($home.'/bin/yt-dlp');
 
     $filesystem->ensureDirectoryExists($vaultRoot);
 
     app(AppConfigStore::class)->save(new AppConfig(
-        playlistFeedUrl: 'https://example.com/feed.xml',
+        playlistId: 'PLabc123',
         vaultRoot: $vaultRoot,
         dailyNotePathPattern: 'daily/{month_number_padded} {month_name}/{day_number_padded} {month_name}.md',
         timezone: 'America/Los_Angeles',
         weeklyPickCount: 5,
         sectionHeading: 'Watch This Week',
+        ytDlpCookiesFromBrowser: '',
         dataDirectory: $dataDirectory,
         ytDlpPath: $binary,
         scheduleEnabled: true,
     ));
-
-    app()->instance(FeedFetcher::class, new class implements FeedFetcher
-    {
-        public function fetch(string $url): array
-        {
-            return [[
-                'video_id' => 'abc123',
-                'url' => 'https://youtube.com/watch?v=abc123',
-                'title' => 'Test video',
-                'channel' => 'Channel',
-                'published_at' => '2026-03-17T00:00:00+00:00',
-                'feed_seen_at' => '2026-03-17T00:00:00+00:00',
-            ]];
-        }
-    });
 
     app()->instance(CronManager::class, new class implements CronManager
     {
@@ -73,4 +61,6 @@ it('reports passing checks for a healthy installation', function () {
         ->expectsOutputToContain('[PASS] Config file')
         ->expectsOutputToContain('[PASS] Schedule status')
         ->assertExitCode(0);
+
+    expect($filesystem->isDirectory($dailyDirectory))->toBeFalse();
 });

@@ -6,12 +6,13 @@ use App\Config\AppConfigStore;
 it('saves and loads config from the local app home', function () {
     $store = app(AppConfigStore::class);
     $config = new AppConfig(
-        playlistFeedUrl: 'https://example.com/feed.xml',
+        playlistId: 'PLabc123',
         vaultRoot: testHome().'/vault',
         dailyNotePathPattern: 'daily/{month_number_padded} {month_name}/{day_number_padded} {month_name}.md',
         timezone: 'America/Los_Angeles',
         weeklyPickCount: 5,
         sectionHeading: 'Watch This Week',
+        ytDlpCookiesFromBrowser: 'safari',
         dataDirectory: testHome().'/data',
         ytDlpPath: fakeBinary(testHome().'/bin/yt-dlp'),
         scheduleEnabled: true,
@@ -20,6 +21,7 @@ it('saves and loads config from the local app home', function () {
     $store->save($config);
     $loaded = $store->load();
 
-    expect($loaded->playlistFeedUrl)->toBe('https://example.com/feed.xml')
+    expect($loaded->playlistId)->toBe('PLabc123')
+        ->and($loaded->ytDlpCookiesFromBrowser)->toBe('safari')
         ->and($loaded->weeklyPickCount)->toBe(5);
 });

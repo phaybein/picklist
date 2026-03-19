@@ -18,7 +18,7 @@ class QueueSyncCommand extends Command
     {
         $config = $store->load();
         $existing = collect($repository->load($config))->keyBy('video_id');
-        $fresh = collect($feedFetcher->fetch($config->playlistFeedUrl))
+        $fresh = collect($feedFetcher->fetch($config))
             ->keyBy('video_id')
             ->map(function (array $video) use ($existing): array {
                 /** @var array<string, mixed> $persisted */

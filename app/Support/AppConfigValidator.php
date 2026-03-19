@@ -3,7 +3,6 @@
 namespace App\Support;
 
 use App\Config\AppConfig;
-use App\Contracts\FeedFetcher;
 use DateTimeZone;
 use Illuminate\Filesystem\Filesystem;
 use RuntimeException;
@@ -12,29 +11,20 @@ final class AppConfigValidator
 {
     public function __construct(
         private readonly Filesystem $files,
-        private readonly FeedFetcher $feedFetcher,
         private readonly DailyNotePathResolver $pathResolver,
     ) {}
 
     /**
      * @return list<string>
      */
-    public function validate(AppConfig $config): array
+    public function validate(AppConfig $config, bool $allowDirectoryCreation = true): array
     {
         $errors = [];
 
-        if (! filter_var($config->playlistFeedUrl, FILTER_VALIDATE_URL)) {
-            $errors[] = 'Playlist feed URL must be a valid URL.';
-        } else {
-            try {
-                $items = $this->feedFetcher->fetch($config->playlistFeedUrl);
-
-                if ($items === []) {
-                    $errors[] = 'Playlist feed returned no videos.';
-                }
-            } catch (\Throwable $exception) {
-                $errors[] = 'Playlist feed could not be fetched: '.$exception->getMessage();
-            }
+        if ($config->playlistId === '') {
+            $errors[] = 'Playlist ID is required.';
+        } elseif (! preg_match('/^[A-Za-z0-9_-]+$/', $config->playlistId)) {
+            $errors[] = 'Playlist ID is invalid.';
         }
 
         if (! $this->files->isDirectory($config->vaultRoot)) {
@@ -71,7 +61,12 @@ final class AppConfigValidator
                 throw new RuntimeException('Daily note path pattern resolves outside the vault root.');
             }
 
-            if (! $this->files->isDirectory($directory) && ! $this->files->makeDirectory($directory, 0755, true, true) && ! $this->files->isDirectory($directory)) {
+            if (
+                $allowDirectoryCreation
+                && ! $this->files->isDirectory($directory)
+                && ! $this->files->makeDirectory($directory, 0755, true, true)
+                && ! $this->files->isDirectory($directory)
+            ) {
                 throw new RuntimeException('Daily note directory could not be created.');
             }
         } catch (\Throwable $exception) {
