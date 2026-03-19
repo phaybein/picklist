@@ -4,7 +4,7 @@
 
 Turn a YouTube playlist into a ranked weekly watch queue.
 
-It watches a dedicated YouTube playlist feed, enriches videos with `yt-dlp`, ranks them with a weekly-priority model, and writes the top picks into an Obsidian daily note.
+It reads a dedicated YouTube playlist with `yt-dlp`, enriches videos with metadata and subtitles, ranks them with a weekly-priority model, and writes the top picks into an Obsidian daily note.
 
 This project is designed to be forked and run from source on macOS first.
 
@@ -22,7 +22,7 @@ Picklist solves that problem by helping me surface the best videos each week, so
 
 - Guided onboarding with `install`
 - Health checks with `doctor`
-- Feed sync from a dedicated playlist RSS/feed URL
+- Playlist sync from a dedicated YouTube playlist ID
 - Metadata and subtitle enrichment with `yt-dlp`
 - Hybrid ranking:
   - content quality tier inspired by `label_and_rate`
@@ -34,11 +34,19 @@ Picklist solves that problem by helping me surface the best videos each week, so
 
 V1 does **not** read YouTube `Watch Later` directly.
 
-Use a dedicated playlist instead. The app expects a playlist RSS/feed URL such as:
+Use a dedicated playlist instead. The app expects a playlist ID such as:
 
 ```text
-https://www.youtube.com/feeds/videos.xml?playlist_id=YOUR_PLAYLIST_ID
+PL_EXAMPLE_PLAYLIST_ID
 ```
+
+From that ID, Picklist builds the normal YouTube playlist URL:
+
+```text
+https://www.youtube.com/playlist?list=YOUR_PLAYLIST_ID
+```
+
+If the playlist is private, Picklist can also pass `--cookies-from-browser` to `yt-dlp` when you configure a browser source during install.
 
 That keeps the app simpler, more stable, and friendlier for a public repo.
 
@@ -92,29 +100,31 @@ picklist doctor
 picklist queue:run
 ```
 
-Example playlist feed URL:
+Example playlist ID:
 
 ```text
-https://www.youtube.com/feeds/videos.xml?playlist_id=PL_EXAMPLE_PLAYLIST_ID
+PL_EXAMPLE_PLAYLIST_ID
 ```
 
 During install, you will point Picklist at:
 
-- your playlist feed URL
+- your playlist ID
 - your Obsidian vault root
 - your daily note path pattern
+- an optional browser cookies source for private playlists
 - your preferred local data directory
 
 ## Onboarding Flow
 
 `install` asks for:
 
-- playlist feed URL
+- playlist ID
 - Obsidian vault root
 - daily note path pattern
 - timezone
 - weekly pick count
 - section heading
+- browser cookies source for private YouTube access (optional)
 - local data directory
 - `yt-dlp` binary path
 - whether `picklist` should be installed into `~/.local/bin`
@@ -198,16 +208,14 @@ The cron entry should run every minute:
 The app keeps user-specific state outside the repo:
 
 - `config.json`
-- `data/queue.json`
+- `queue.json` inside the configured data directory
 
 No private paths, secrets, or local snapshots need to be committed.
 
 ## Naming
 
 - GitHub repo: `phaybein/picklist`
-- Composer package: `mauromartinez/picklist`
-
-That split is currently intentional. The repo and the PHP package do not have to share the same owner string.
+- Composer package: `phaybein/picklist`
 
 ## Development
 
@@ -229,7 +237,8 @@ composer lint
 
 Common setup issues:
 
-- the playlist feed URL is wrong
+- the playlist ID is wrong
+- the playlist is private but no browser cookies source is configured
 - `yt-dlp` is not installed or not executable
 - the vault root path is wrong
 - the daily note pattern does not match your vault layout

@@ -1,13 +1,13 @@
 {
-    "name": "mauromartinez/picklist",
+    "name": "phaybein/picklist",
     "description": "A fork-friendly Laravel Zero CLI that ranks a YouTube playlist and publishes weekly picks into Obsidian.",
     "keywords": ["youtube", "obsidian", "laravel zero", "console", "cli", "playlist"],
-    "homepage": "https://github.com/mauromartinez/picklist",
+    "homepage": "https://github.com/phaybein/picklist",
     "type": "project",
     "license": "MIT",
     "support": {
-        "issues": "https://github.com/mauromartinez/picklist/issues",
-        "source": "https://github.com/mauromartinez/picklist"
+        "issues": "https://github.com/phaybein/picklist/issues",
+        "source": "https://github.com/phaybein/picklist"
     },
     "authors": [
         {
