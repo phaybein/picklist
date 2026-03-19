@@ -17,8 +17,11 @@ final class AppConfigValidator
     /**
      * @return list<string>
      */
-    public function validate(AppConfig $config, bool $allowDirectoryCreation = true): array
-    {
+    public function validate(
+        AppConfig $config,
+        bool $allowDirectoryCreation = true,
+        bool $requireYtDlpBinary = true,
+    ): array {
         $errors = [];
 
         if ($config->playlistId === '') {
@@ -49,11 +52,15 @@ final class AppConfigValidator
             $errors[] = 'Data directory is required.';
         }
 
-        if (! $this->binaryExists($config->ytDlpPath)) {
+        if ($requireYtDlpBinary && ! $this->binaryExists($config->ytDlpPath)) {
             $errors[] = 'yt-dlp binary was not found or is not executable.';
         }
 
         try {
+            if ($this->containsTraversal($config->dailyNotePathPattern)) {
+                throw new RuntimeException('Daily note path pattern cannot contain ".." path segments.');
+            }
+
             $resolved = $this->pathResolver->resolve($config, now($config->timezone));
             $directory = dirname($resolved);
 
@@ -76,7 +83,7 @@ final class AppConfigValidator
         return $errors;
     }
 
-    private function binaryExists(string $binaryPath): bool
+    public function binaryExists(string $binaryPath): bool
     {
         if ($binaryPath === '') {
             return false;
@@ -89,5 +96,13 @@ final class AppConfigValidator
         $resolved = trim((string) shell_exec('command -v '.escapeshellarg($binaryPath).' 2>/dev/null'));
 
         return $resolved !== '';
+    }
+
+    private function containsTraversal(string $path): bool
+    {
+        $normalized = str_replace('\\', '/', $path);
+        $segments = array_values(array_filter(explode('/', $normalized), static fn (string $segment): bool => $segment !== ''));
+
+        return in_array('..', $segments, true);
     }
 }

@@ -6,8 +6,10 @@ use App\Config\AppConfig;
 use App\Config\AppConfigStore;
 use App\Contracts\BinaryInstaller;
 use App\Contracts\CronManager;
+use App\Contracts\YtDlpInstaller;
 use App\Support\AppConfigValidator;
 use LaravelZero\Framework\Commands\Command;
+use RuntimeException;
 
 class AppInstallCommand extends Command
 {
@@ -20,6 +22,7 @@ class AppInstallCommand extends Command
         AppConfigValidator $validator,
         CronManager $cronManager,
         BinaryInstaller $binaryInstaller,
+        YtDlpInstaller $ytDlpInstaller,
     ): int {
         if ($store->exists() && ! $this->option('force')) {
             $this->error('A config already exists. Re-run with --force to overwrite it.');
@@ -43,12 +46,18 @@ class AppInstallCommand extends Command
             scheduleEnabled: (bool) $this->confirm('Enable scheduled sync and weekly publishing?', true),
         );
 
-        $errors = $validator->validate($config);
+        $errors = $validator->validate($config, allowDirectoryCreation: false, requireYtDlpBinary: false);
 
         if ($errors !== []) {
-            foreach ($errors as $error) {
-                $this->error($error);
-            }
+            $this->displayErrors($errors);
+
+            return self::FAILURE;
+        }
+
+        $config = $this->installYtDlpIfMissing($config, $validator, $ytDlpInstaller);
+
+        if (! $validator->binaryExists($config->ytDlpPath)) {
+            $this->error('yt-dlp binary was not found or is not executable.');
 
             return self::FAILURE;
         }
@@ -75,6 +84,58 @@ class AppInstallCommand extends Command
         return self::SUCCESS;
     }
 
+    /**
+     * @param  list<string>  $errors
+     */
+    private function displayErrors(array $errors): void
+    {
+        foreach ($errors as $error) {
+            $this->error($error);
+        }
+    }
+
+    private function installYtDlpIfMissing(
+        AppConfig $config,
+        AppConfigValidator $validator,
+        YtDlpInstaller $ytDlpInstaller,
+    ): AppConfig {
+        if ($validator->binaryExists($config->ytDlpPath) || ! $ytDlpInstaller->canInstallWithHomebrew()) {
+            return $config;
+        }
+
+        if (! $this->confirm('yt-dlp was not found. Install it with Homebrew now?', true)) {
+            return $config;
+        }
+
+        try {
+            $ytDlpPath = $ytDlpInstaller->installWithHomebrew();
+        } catch (RuntimeException $exception) {
+            $this->warn($exception->getMessage());
+
+            return $config;
+        }
+
+        $this->info('yt-dlp installed at '.$ytDlpPath);
+
+        return $this->withYtDlpPath($config, $ytDlpPath);
+    }
+
+    private function withYtDlpPath(AppConfig $config, string $ytDlpPath): AppConfig
+    {
+        return new AppConfig(
+            playlistId: $config->playlistId,
+            vaultRoot: $config->vaultRoot,
+            dailyNotePathPattern: $config->dailyNotePathPattern,
+            timezone: $config->timezone,
+            weeklyPickCount: $config->weeklyPickCount,
+            sectionHeading: $config->sectionHeading,
+            ytDlpCookiesFromBrowser: $config->ytDlpCookiesFromBrowser,
+            dataDirectory: $config->dataDirectory,
+            ytDlpPath: $ytDlpPath,
+            scheduleEnabled: $config->scheduleEnabled,
+        );
+    }
+
     private function maybeInstallBinary(BinaryInstaller $binaryInstaller): void
     {
         if ($binaryInstaller->isInstalled()) {
@@ -89,7 +150,7 @@ class AppInstallCommand extends Command
 
         try {
             $binaryInstaller->install();
-        } catch (\RuntimeException $exception) {
+        } catch (RuntimeException $exception) {
             $this->warn($exception->getMessage());
 
             return;

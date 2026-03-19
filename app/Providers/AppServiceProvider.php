@@ -6,6 +6,8 @@ use App\Contracts\BinaryInstaller;
 use App\Contracts\CronManager;
 use App\Contracts\FeedFetcher;
 use App\Contracts\VideoMetadataFetcher;
+use App\Contracts\YtDlpInstaller;
+use App\Services\HomebrewYtDlpInstaller;
 use App\Services\LocalBinaryInstaller;
 use App\Services\SystemCronManager;
 use App\Services\YoutubeFeedFetcher;
@@ -31,5 +33,6 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(VideoMetadataFetcher::class, YtDlpVideoMetadataFetcher::class);
         $this->app->singleton(CronManager::class, SystemCronManager::class);
         $this->app->singleton(BinaryInstaller::class, LocalBinaryInstaller::class);
+        $this->app->singleton(YtDlpInstaller::class, HomebrewYtDlpInstaller::class);
     }
 }
