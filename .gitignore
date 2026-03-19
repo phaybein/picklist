@@ -4,3 +4,8 @@
 /.vagrant
 .phpunit.result.cache
 .DS_Store
+/.picklist/
+/config.json
+/queue.json
+/builds/
+/*.phar
