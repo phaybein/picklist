@@ -48,9 +48,11 @@ function testHome(): string
     $home = sys_get_temp_dir().'/picklist-tests/'.md5((string) test()->name());
     app(Filesystem::class)->deleteDirectory($home);
     app(Filesystem::class)->ensureDirectoryExists($home);
-    putenv('YT_SUGGESTIONS_HOME='.$home);
-    $_ENV['YT_SUGGESTIONS_HOME'] = $home;
-    $_SERVER['YT_SUGGESTIONS_HOME'] = $home;
+    putenv('PICKLIST_HOME='.$home);
+    $_ENV['PICKLIST_HOME'] = $home;
+    $_SERVER['PICKLIST_HOME'] = $home;
+    putenv('YT_SUGGESTIONS_HOME');
+    unset($_ENV['YT_SUGGESTIONS_HOME'], $_SERVER['YT_SUGGESTIONS_HOME']);
 
     return $home;
 }

@@ -18,15 +18,14 @@ final class YtDlpVideoMetadataFetcher implements VideoMetadataFetcher
         private readonly int $subtitleTimeoutSeconds = 180,
     ) {}
 
-    public function fetch(string $url, string $binaryPath): array
+    public function fetch(string $url, string $binaryPath, string $cookiesFromBrowser = ''): array
     {
-        $metadataProcess = new Process([
+        $metadataProcess = new Process($this->buildCommand([
             $binaryPath,
             '--dump-single-json',
             '--skip-download',
             '--no-warnings',
-            $url,
-        ]);
+        ], $url, $cookiesFromBrowser));
         $metadataProcess->setTimeout($this->metadataTimeoutSeconds);
 
         try {
@@ -45,7 +44,7 @@ final class YtDlpVideoMetadataFetcher implements VideoMetadataFetcher
         $subtitleStatus = 'missing';
 
         try {
-            $subtitleProcess = new Process([
+            $subtitleProcess = new Process($this->buildCommand([
                 $binaryPath,
                 '--skip-download',
                 '--write-auto-subs',
@@ -58,8 +57,7 @@ final class YtDlpVideoMetadataFetcher implements VideoMetadataFetcher
                 '%(id)s.%(ext)s',
                 '--paths',
                 $temporaryDirectory,
-                $url,
-            ]);
+            ], $url, $cookiesFromBrowser));
             $subtitleProcess->setTimeout($this->subtitleTimeoutSeconds);
 
             try {
@@ -104,5 +102,21 @@ final class YtDlpVideoMetadataFetcher implements VideoMetadataFetcher
             'transcript_excerpt' => '',
             'subtitle_status' => 'timeout',
         ];
+    }
+
+    /**
+     * @param  list<string>  $command
+     * @return list<string>
+     */
+    private function buildCommand(array $command, string $url, string $cookiesFromBrowser): array
+    {
+        if ($cookiesFromBrowser !== '') {
+            $command[] = '--cookies-from-browser';
+            $command[] = $cookiesFromBrowser;
+        }
+
+        $command[] = $url;
+
+        return $command;
     }
 }

@@ -1,43 +1,11 @@
 <?php
 
 use App\Config\AppConfig;
-use App\Config\AppConfigStore;
+use App\Services\QueueRepository;
 use Illuminate\Filesystem\Filesystem;
 
-it('saves and loads config from the local app home', function () {
-    $store = app(AppConfigStore::class);
-    $config = new AppConfig(
-        playlistId: 'PLabc123',
-        vaultRoot: testHome().'/vault',
-        dailyNotePathPattern: 'daily/{month_number_padded} {month_name}/{day_number_padded} {month_name}.md',
-        timezone: 'America/Los_Angeles',
-        weeklyPickCount: 5,
-        sectionHeading: 'Watch This Week',
-        ytDlpCookiesFromBrowser: 'safari',
-        dataDirectory: testHome().'/data',
-        ytDlpPath: fakeBinary(testHome().'/bin/yt-dlp'),
-        scheduleEnabled: true,
-    );
-
-    $store->save($config);
-    $loaded = $store->load();
-
-    expect($loaded->playlistId)->toBe('PLabc123')
-        ->and($loaded->ytDlpCookiesFromBrowser)->toBe('safari')
-        ->and($loaded->weeklyPickCount)->toBe(5);
-});
-
-it('prefers PICKLIST_HOME for local app storage', function () {
+it('writes queue data with owner-only permissions', function () {
     $home = testHome();
-    $store = app(AppConfigStore::class);
-
-    expect($store->homePath())->toBe($home)
-        ->and($store->configPath())->toBe($home.'/config.json');
-});
-
-it('writes config with owner-only permissions', function () {
-    $home = testHome();
-    $store = app(AppConfigStore::class);
     $config = new AppConfig(
         playlistId: 'PLabc123',
         vaultRoot: $home.'/vault',
@@ -51,21 +19,22 @@ it('writes config with owner-only permissions', function () {
         scheduleEnabled: true,
     );
 
-    $store->save($config);
+    $repository = app(QueueRepository::class);
+    $repository->save($config, [[
+        'video_id' => 'abc123',
+        'url' => 'https://youtube.com/watch?v=abc123',
+    ]]);
 
-    expect(fileperms($store->configPath()) & 0777)->toBe(0600)
-        ->and(fileperms($home.'/data') & 0777)->toBe(0700);
+    expect(fileperms($repository->path($config)) & 0777)->toBe(0600)
+        ->and(fileperms($config->dataDirectory) & 0777)->toBe(0700);
 });
 
-it('does not tighten permissions on existing directories', function () {
+it('does not tighten permissions on an existing data directory', function () {
     $home = testHome();
-    chmod($home, 0755);
-
     $dataDirectory = $home.'/shared-data';
     app(Filesystem::class)->ensureDirectoryExists($dataDirectory);
     chmod($dataDirectory, 0755);
 
-    $store = app(AppConfigStore::class);
     $config = new AppConfig(
         playlistId: 'PLabc123',
         vaultRoot: $home.'/vault',
@@ -79,14 +48,17 @@ it('does not tighten permissions on existing directories', function () {
         scheduleEnabled: true,
     );
 
-    $store->save($config);
+    $repository = app(QueueRepository::class);
+    $repository->save($config, [[
+        'video_id' => 'abc123',
+        'url' => 'https://youtube.com/watch?v=abc123',
+    ]]);
 
-    expect(fileperms($home) & 0777)->toBe(0755)
-        ->and(fileperms($dataDirectory) & 0777)->toBe(0755)
-        ->and(fileperms($store->configPath()) & 0777)->toBe(0600);
+    expect(fileperms($dataDirectory) & 0777)->toBe(0755)
+        ->and(fileperms($repository->path($config)) & 0777)->toBe(0600);
 });
 
-it('fails when config file permissions cannot be hardened', function () {
+it('fails when queue file permissions cannot be hardened', function () {
     $home = testHome();
     $filesystem = new class extends Filesystem
     {
@@ -102,7 +74,6 @@ it('fails when config file permissions cannot be hardened', function () {
         }
     };
 
-    $store = new AppConfigStore($filesystem);
     $config = new AppConfig(
         playlistId: 'PLabc123',
         vaultRoot: $home.'/vault',
@@ -116,8 +87,11 @@ it('fails when config file permissions cannot be hardened', function () {
         scheduleEnabled: true,
     );
 
-    $filesystem->failingPath = $store->configPath();
+    $repository = new QueueRepository($filesystem);
+    $filesystem->failingPath = $repository->path($config);
 
-    expect(fn () => $store->save($config))
-        ->toThrow(RuntimeException::class, 'Unable to set permissions on');
+    expect(fn () => $repository->save($config, [[
+        'video_id' => 'abc123',
+        'url' => 'https://youtube.com/watch?v=abc123',
+    ]]))->toThrow(RuntimeException::class, 'Unable to set permissions on');
 });

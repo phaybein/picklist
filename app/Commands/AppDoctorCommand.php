@@ -17,7 +17,7 @@ class AppDoctorCommand extends Command
     public function handle(AppConfigStore $store, AppConfigValidator $validator, CronManager $cronManager): int
     {
         if (! $store->exists()) {
-            $this->error('[FAIL] Config is missing. Run "./picklist install" first.');
+            $this->error('[FAIL] Config is missing. Run "php picklist install" first.');
 
             return self::FAILURE;
         }

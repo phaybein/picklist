@@ -41,6 +41,51 @@ SH);
         ->and($metadata['published_at'])->toBe('2026-03-18T00:00:00+00:00');
 });
 
+it('passes browser cookies source to yt-dlp commands when provided', function () {
+    $home = testHome();
+    $filesystem = app(Filesystem::class);
+    $binary = $home.'/bin/yt-dlp';
+    $argsLog = $home.'/yt-dlp-args.log';
+
+    $filesystem->ensureDirectoryExists(dirname($binary));
+    $filesystem->put($binary, <<<SH
+#!/bin/sh
+printf '%s\n' "\$@" >> "$argsLog"
+
+case " $* " in
+  *" --write-auto-subs "*)
+    mkdir -p "$8"
+    cat <<'VTT' > "$8/abc123.en.vtt"
+WEBVTT
+
+00:00:00.000 --> 00:00:02.000
+Transcript line
+VTT
+    ;;
+  *)
+    cat <<'JSON'
+{"title":"Private video","description":"Private metadata.","channel":"Hidden Channel","duration":1200,"upload_date":"20260318"}
+JSON
+    ;;
+esac
+SH);
+    chmod($binary, 0755);
+
+    $fetcher = new YtDlpVideoMetadataFetcher(
+        $filesystem,
+        app(VttSubtitleParser::class),
+        metadataTimeoutSeconds: 5,
+        subtitleTimeoutSeconds: 5,
+    );
+
+    $metadata = $fetcher->fetch('https://www.youtube.com/watch?v=abc123', $binary, 'safari');
+    $args = preg_split('/\R/', trim((string) $filesystem->get($argsLog))) ?: [];
+
+    expect($metadata['title'])->toBe('Private video')
+        ->and($args)->toContain('--cookies-from-browser')
+        ->and($args)->toContain('safari');
+});
+
 it('returns a non-destructive fallback when metadata fetching times out', function () {
     $home = testHome();
     $filesystem = app(Filesystem::class);

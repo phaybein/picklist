@@ -31,7 +31,11 @@ class QueueRankCommand extends Command
         $progressBar->start();
 
         foreach ($videos as $video) {
-            $metadata = $metadataFetcher->fetch((string) $video['url'], $config->ytDlpPath);
+            $metadata = $metadataFetcher->fetch(
+                (string) $video['url'],
+                $config->ytDlpPath,
+                $config->ytDlpCookiesFromBrowser,
+            );
             $ranked[] = $ranker->rank(array_merge($video, $metadata));
             $progressBar->advance();
         }

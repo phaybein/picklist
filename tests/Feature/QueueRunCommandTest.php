@@ -45,7 +45,7 @@ it('runs the full flow and publishes on monday', function () {
 
     app()->instance(VideoMetadataFetcher::class, new class implements VideoMetadataFetcher
     {
-        public function fetch(string $url, string $binaryPath): array
+        public function fetch(string $url, string $binaryPath, string $cookiesFromBrowser = ''): array
         {
             return [
                 'title' => 'AI and Human Creativity',

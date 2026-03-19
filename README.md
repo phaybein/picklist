@@ -1,24 +1,14 @@
 # Picklist
 
-`Picklist` is a public-first Laravel Zero CLI for people who save too many YouTube videos.
+Picklist is a CLI for people who save too many YouTube videos.
 
 Turn a YouTube playlist into a ranked weekly watch queue.
 
-It reads a dedicated YouTube playlist with `yt-dlp`, enriches videos with metadata and subtitles, ranks them with a weekly-priority model, and writes the top picks into an Obsidian daily note.
+It reads a dedicated YouTube playlist with `yt-dlp`, enriches videos with metadata and subtitles, ranks the backlog, and writes the top picks into an Obsidian daily note.
 
-This project is designed to be forked and run from source on macOS first.
+It is designed to be forked and run from source on macOS first.
 
-## Why I Built It
-
-I spend a lot of time on YouTube while running, and I regularly find videos I want to watch later.
-
-The problem is that my watch queue keeps growing faster than I can get through it.
-
-As the backlog grows, great videos get buried. I know I am probably missing high-quality videos simply because they are lost in the queue.
-
-Picklist solves that problem by helping me surface the best videos each week, so I can actually watch them instead of letting them disappear into a growing playlist backlog.
-
-## What It Does
+## What You Get
 
 - Guided onboarding with `install`
 - Health checks with `doctor`
@@ -30,33 +20,28 @@ Picklist solves that problem by helping me surface the best videos each week, so
 - Daily note publishing to a managed `## Watch This Week` section
 - Scheduler support through Laravel Zero and cron
 
-## Important Constraint
+## Example Output
 
-V1 does **not** read YouTube `Watch Later` directly.
+Picklist manages one section in your note:
 
-Use a dedicated playlist instead. The app expects a playlist ID such as:
+```md
+## Watch This Week
 
-```text
-PL_EXAMPLE_PLAYLIST_ID
+- [AI and Human Creativity](<https://youtube.com/watch?v=abc123>) | Thoughtful Channel | 25m | A Tier | High-upside ai pick with strong weekly relevance.
+- [Better Systems for Deep Work](<https://youtube.com/watch?v=def456>) | Focus Lab | 18m | B Tier | Timely productivity video worth prioritizing this week.
 ```
 
-From that ID, Picklist builds the normal YouTube playlist URL:
+Everything else in the note is preserved.
 
-```text
-https://www.youtube.com/playlist?list=YOUR_PLAYLIST_ID
-```
+## Why I Built It
 
-If the playlist is private, Picklist can also pass `--cookies-from-browser` to `yt-dlp` when you configure a browser source during install.
+I spend a lot of time on YouTube while running, and I regularly find videos I want to watch later.
 
-That keeps the app simpler, more stable, and friendlier for a public repo.
+The problem is that my watch queue keeps growing faster than I can get through it.
 
-## Why A Dedicated Playlist
+As the backlog grows, great videos get buried. I know I am probably missing high-quality videos simply because they are lost in the queue.
 
-YouTube `Watch Later` is convenient, but it is a poor public-first integration target.
-
-It is private by default, awkward to access reliably through official APIs, and tends to push an app toward browser-auth hacks or scraping. A dedicated playlist is much easier for other people to fork, understand, and configure on their own systems.
-
-The tradeoff is small: instead of reusing `Watch Later`, you save videos into a dedicated playlist that Picklist manages as your source queue.
+Picklist solves that problem by helping me surface the best videos each week, so I can actually watch them instead of letting them disappear into a growing playlist backlog.
 
 ## Requirements
 
@@ -95,9 +80,9 @@ php picklist queue:run
 ## First Run Example
 
 ```bash
-picklist install
-picklist doctor
-picklist queue:run
+php picklist install
+php picklist doctor
+php picklist queue:run
 ```
 
 Example playlist ID:
@@ -136,7 +121,7 @@ If scheduling is enabled, the installer can also offer to install a cron entry f
 php picklist schedule:run
 ```
 
-The app stores local user config outside the git repo, in `~/.picklist` by default, or in `YT_SUGGESTIONS_HOME` if you set it.
+The app stores local user config outside the git repo, in `~/.picklist` by default, or in `PICKLIST_HOME` if you set it.
 
 The install flow can also symlink `picklist` into `~/.local/bin`, so users can run `picklist install` and `picklist queue:run` from anywhere once that directory is on their `PATH`.
 
@@ -177,18 +162,33 @@ For March 17, 2026, that resolves to:
 daily/03 March/17 March.md
 ```
 
-## Example Output
+## Important Constraint
 
-The app manages one section in your note:
+V1 does **not** read YouTube `Watch Later` directly.
 
-```md
-## Watch This Week
+Use a dedicated playlist instead. The app expects a playlist ID such as:
 
-- [AI and Human Creativity](<https://youtube.com/watch?v=abc123>) | Thoughtful Channel | 25m | A Tier | High-upside ai pick with strong weekly relevance.
-- [Better Systems for Deep Work](<https://youtube.com/watch?v=def456>) | Focus Lab | 18m | B Tier | Timely productivity video worth prioritizing this week.
+```text
+PL_EXAMPLE_PLAYLIST_ID
 ```
 
-Everything else in the note is preserved.
+From that ID, Picklist builds the normal YouTube playlist URL:
+
+```text
+https://www.youtube.com/playlist?list=YOUR_PLAYLIST_ID
+```
+
+If the playlist is private, Picklist can pass `--cookies-from-browser` to `yt-dlp` when you configure a browser source during install.
+
+That keeps the app simpler, more stable, and friendlier for a public repo.
+
+## Why A Dedicated Playlist
+
+YouTube `Watch Later` is convenient, but it is a poor public-first integration target.
+
+It is private by default, awkward to access reliably through official APIs, and tends to push an app toward browser-auth hacks or scraping. A dedicated playlist is much easier for other people to fork, understand, and configure on their own systems.
+
+The tradeoff is small: instead of reusing `Watch Later`, you save videos into a dedicated playlist that Picklist manages as your source queue.
 
 ## Scheduler
 
@@ -230,6 +230,8 @@ Format the code:
 ```bash
 composer lint
 ```
+
+The automated test suite covers install, doctor, sync, rank, run, and weekly note publishing flows.
 
 ## Troubleshooting
 
